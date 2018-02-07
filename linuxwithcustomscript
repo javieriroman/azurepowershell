@@ -1,0 +1,69 @@
+#this is for a runbook
+#define parameters, in this format they are manually entered 
+#Param(  [string]$ResourceGroupName,  [string]$Location )
+
+#add Azure authentication to be able to access you Azure resources. 
+
+$Conn = Get-AutomationConnection -Name AzureRunAsConnection 
+Add-AzureRMAccount -ServicePrincipal -Tenant $Conn.TenantID -ApplicationID $Conn.ApplicationID -CertificateThumbprint $Conn.CertificateThumbprint  
+ 
+$ResourceGroupName = Get-AutomationVariable -Name 'rgname'
+$Location = Get-AutomationVariable -Name 'location'
+
+Write-output ($ResourceGroupName+" "+$Location)
+New-AzureRmResourceGroup -Name (Get-AutomationVariable -Name 'rgname') -Location (Get-AutomationVariable -Name 'location')
+ 
+# Create a subnet configuration 
+ 
+$subnetConfig = New-AzureRmVirtualNetworkSubnetConfig -Name mySubnet -AddressPrefix 192.168.1.0/24
+
+# Create a virtual network 
+ 
+$vnet = New-AzureRmVirtualNetwork -ResourceGroupName $ResourceGroupName -Location $Location -Name MYvNET -AddressPrefix 192.168.0.0/16 -Subnet $subnetConfig 
+ 
+ 
+# Create a public IP address and specify a DNS name 
+ 
+$pip = New-AzureRmPublicIpAddress -ResourceGroupName $ResourceGroupName -Location $Location -AllocationMethod Static -IdleTimeoutInMinutes 4 -Name "mypublicdns$(Get-Random)" 
+ 
+ 
+# Create an inbound network security group rule for port 3389 
+ 
+$nsgRulessh = New-AzureRmNetworkSecurityRuleConfig -Name myNetworkSecurityGroupRuleRDP  -Protocol Tcp -Direction Inbound -Priority 1000 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix * -DestinationPortRange 22 -Access Allow 
+ 
+ 
+# Create an inbound network security group rule for port 80 
+ 
+$nsgRuleWeb = New-AzureRmNetworkSecurityRuleConfig -Name myNetworkSecurityGroupRuleWWW  -Protocol Tcp -Direction Inbound -Priority 1001 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix * -DestinationPortRange 80 -Access Allow 
+ 
+ 
+# Create a network security group 
+ 
+$nsg = New-AzureRmNetworkSecurityGroup -ResourceGroupName $ResourceGroupName -Location $Location -Name myNetworkSecurityGroup -SecurityRules $nsgRulessh,$nsgRuleWeb 
+ 
+ 
+# Create a virtual network card and associate with public IP address and NSG 
+ 
+$nic = New-AzureRmNetworkInterface -Name myNic -ResourceGroupName $ResourceGroupName -Location $Location -SubnetId $vnet.Subnets[0].Id -PublicIpAddressId $pip.Id -NetworkSecurityGroupId $nsg.Id 
+ 
+ 
+# Define a credential object 
+ 
+ 
+#$VMLocalAdminSecurePassword = ConvertTo-SecureString 'password@2018' -AsPlainText -Force
+#$Cred = New-Object System.Management.Automation.PSCredential ("javier", $VMLocalAdminSecurePassword);  
+$Cred = Get-AutomationPSCredential -Name 'newvms'; 
+ 
+# Create a virtual machine configuration
+$vmConfig = New-AzureRmVMConfig -VMName myVM -VMSize Standard_D2s_v3 | 
+Set-AzureRmVMOperatingSystem -Linux -ComputerName myVM -Credential $cred |
+Set-AzureRmVMSourceImage -PublisherName Canonical -Offer UbuntuServer -Skus 16.04-LTS -Version latest | 
+Add-AzureRmVMNetworkInterface -Id $nic.Id
+ 
+#Create the Virtual Machine 
+New-AzureRmVM -ResourceGroupName $ResourceGroupName -Location $Location -VM $vmConfig 
+
+# Install apache.
+$PublicSettings = '{"commandToExecute":"apt-get -y update && apt-get -y install apache2"}'
+
+Set-AzureRmVMExtension -ExtensionName "APACHE" -ResourceGroupName $ResourceGroupName -VMName myVM -Publisher "Microsoft.Azure.Extensions" -ExtensionType "CustomScript" -TypeHandlerVersion 2.0 -SettingString $PublicSettings -Location $Location
