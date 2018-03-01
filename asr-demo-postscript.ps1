@@ -166,7 +166,7 @@ Catch
                    -ErrorAction Stop
  }
  Try
- {  $pname = Get-Date
+ {
     New-AzureRmTrafficManagerEndpoint -name secondary -ProfileName $trafficmanager.Name -ResourceGroupName $trafficmanager.ResourceGroupName -Type AzureEndpoints -EndpointStatus Enabled -TargetResourceId $LoadBalancer.FrontendIpConfigurations.publicipaddress.Id      
  }
 Catch
