@@ -12,7 +12,8 @@ New-AzureRmResourceGroupDeployment -resourcegroupname $targetrg -templateuri  ht
 #> Now we select the VMs that are going to be replicated/protected on the portal, 
 #> select the type of replication in this case "Azure to Azure" and the newtork mapping for the target site.
 
-#> After replication has been enable on all the VMs we proceed to create automation variable for the post script
+#> After replication has been enable on all the VMs we proceed to create automation variable for the post script.
+#> Please make sure that each value aligned with the current name of the resource you are defining.
 
 New-AzureRmAutomationVariable -ResourceGroupName asr-target -AutomationAccountName asr-automation -Name myrecoveryplan-LB -Value myLB-asr -Encrypted $false
 New-AzureRmAutomationVariable -ResourceGroupName asr-target -AutomationAccountName asr-automation -Name myrecoveryplan-LBRG -Value asr-target -Encrypted $false 
@@ -22,17 +23,20 @@ New-AzureRmAutomationVariable -ResourceGroupName asr-target -AutomationAccountNa
 
 New-AzureRmAutomationVariable -ResourceGroupName asr-target -AutomationAccountName asr-automation -Name myrecoveryplan-TM -Value asrdemoarrow -Encrypted $false
 New-AzureRmAutomationVariable -ResourceGroupName asr-target -AutomationAccountName asr-automation -Name myrecoveryplan-TMRG -Value asr-source -Encrypted $false 
-#> Now you have to import a post script to be execute at the end of the recovery plan to glue everything together.
-#> Here you have 2 options, powershell from Cloud Shell or portal.
-#>Below the powershell option from your Cloud Shell
 
-Start-BitsTransfer -source https://raw.githubusercontent.com/javieriroman/azurepowershell/master/asr-demo-postscript.ps1 -Destination $HOME/postscript.ps1
-Import-AzureRmAutomationRunbook -AutomationAccountName asr-automation -Name postscript -ResourceGroupName asr-target -Type PowerShell -Path $HOME/postscript.ps1 -Published
+#> Then go the link below to download the post script i create in order to import it as runbook.
 
-#> Below the instruction for the portal option
-#> Then go the link below to download the post script here created in order to import it as runbook.
-#> https://raw.githubusercontent.com/javieriroman/azurepowershell/master/asr-demo-postscript.ps1
+Start-BitsTransfer -source https://raw.githubusercontent.com/javieriroman/azurepowershell/master/asr-add-internaldnslabel -Destination $HOME/add-idnslabel.ps1
+Import-AzureRmAutomationRunbook -AutomationAccountName asr-automation -Name postscript1 -ResourceGroupName asr-target -Type PowerShell -Path $HOME/add-idnslabel.ps1 -Published
+
+Start-BitsTransfer -source https://raw.githubusercontent.com/javieriroman/azurepowershell/master/asr-demo-postscript.ps1 -Destination $HOME/glue-everything.ps1
+Import-AzureRmAutomationRunbook -AutomationAccountName asr-automation -Name postscript2 -ResourceGroupName asr-target -Type PowerShell -Path $HOME/glue-everything.ps1 -Published
+
 #> Go to the automation account, select runbook, select create new, put name and type "powershell"
 #> Once create select the created runbook and select edit, copy the content from the link above, 
-#> then select save and publish. Another option is to import the script from the portal.
-#> Now you can use it on the recovery plan.  
+#> then select save and publish. Now you can use it on the recovery plan.  
+
+#> Last step is to create a recovery plan, base on this exersice the name should be "myrecoveryplan"
+#> You should have 2 group members, the first one for the mysql server with a post script name postscript1 
+#> and the second one for the web VMs with a post script name postscript2. 
+#> After this you are ready to exectute a test failover.
