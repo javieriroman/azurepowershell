@@ -1,0 +1,102 @@
+<# 
+    .DESCRIPTION 
+        This runbook will add internal DNS label so other devices in the same Vnet can talk to this server.
+         You can change the name of hostname on line 86.
+        Pre-requisites 
+        All resources involved are based on Azure Resource Manager (NOT Azure Classic)
+        - VMs in a member group in the recovery plan that need internal dns label
+       
+        The following AzureRm Modules are required
+        - AzureRm.Profile
+        - AzureRm.Resources
+        - AzureRm.Compute
+        - AzureRm.Network          
+#> 
+param ( 
+        [Object]$RecoveryPlanContext 
+      ) 
+
+Write-output $RecoveryPlanContext
+
+# Set Error Preference	
+
+$ErrorActionPreference = "Stop"
+
+if ($RecoveryPlanContext.FailoverDirection -ne "PrimaryToSecondary") 
+    {
+        Write-Output "Failover Direction is not Azure, and the script will stop."
+    }
+else {
+        $VMinfo = $RecoveryPlanContext.VmMap | Get-Member | Where-Object MemberType -EQ NoteProperty | select -ExpandProperty Name
+        Write-Output ("Found the following VMGuid(s): `n" + $VMInfo)
+            if ($VMInfo -is [system.array])
+            {
+                $VMinfo = $VMinfo[0]
+                Write-Output "Found multiple VMs in the Recovery Plan"
+            }
+            else
+            {
+                Write-Output "Found only a single VM in the Recovery Plan"
+            }
+Try 
+ {
+    #Logging in to Azure...
+
+    "Logging in to Azure..."
+    $Conn = Get-AutomationConnection -Name AzureRunAsConnection 
+     Add-AzureRMAccount -ServicePrincipal -Tenant $Conn.TenantID -ApplicationId $Conn.ApplicationID -CertificateThumbprint $Conn.CertificateThumbprint
+
+    "Selecting Azure subscription..."
+    Select-AzureRmSubscription -SubscriptionId $Conn.SubscriptionID -TenantId $Conn.tenantid 
+ }
+Catch
+ {
+      $ErrorMessage = 'Login to Azure subscription failed.'
+      $ErrorMessage += " `n"
+      $ErrorMessage += 'Error: '
+      $ErrorMessage += $_
+      Write-Error -Message $ErrorMessage `
+                    -ErrorAction Stop
+ }
+    #Getting VM details from the Recovery Plan Group, and associate the vNics with the Load Balancer
+Try
+ {
+    $VMinfo = $RecoveryPlanContext.VmMap | Get-Member | Where-Object MemberType -EQ NoteProperty | select -ExpandProperty Name
+    $VMs = $RecoveryPlanContext.VmMap
+    $vmMap = $RecoveryPlanContext.VmMap
+    $number = 0 ;
+    foreach ($VMID in $VMinfo)
+    {   
+        $VM = $vmMap.$VMID
+        Write-Output $VM.ResourceGroupName
+        Write-Output $VM.RoleName    
+        $AzureVm = Get-AzureRmVm -ResourceGroupName $VM.ResourceGroupName -Name $VM.RoleName    
+        If ($AzureVm.AvailabilitySetReference -eq $null)
+        {
+            Write-Output "No Availability Set is present for VM: `n" $AzureVm.Name
+        }
+        else
+        {
+            Write-Output "Availability Set is present for VM: `n" $AzureVm.Name
+        }
+        #Join the VMs NICs to backend pool of the Load Balancer
+        $nicid = $AzureVm.NetworkProfile.NetworkInterfaces[0]
+        $ARMNic = Get-AzureRmResource -ResourceId $nicid.Id
+        $Nic = Get-AzureRmNetworkInterface -Name $ARMNic.Name -ResourceGroupName $ARMNic.ResourceGroupName
+        $Nic.DnsSettings.InternalDnsNameLabel = "mysqlserver";
+        
+        $Nic | Set-AzureRmNetworkInterface
+        Write-Output "Done configuring Load Balancing for VM" $AzureVm.Name 
+        $number = $number + 1;   
+    }
+ }
+Catch
+ {
+    $ErrorMessage = 'Failed to add the internal dns label to the VM.'
+    $ErrorMessage += " `n"
+    $ErrorMessage += 'Error: '
+    $ErrorMessage += $_
+    Write-Error -Message $ErrorMessage `
+                   -ErrorAction Stop
+ }
+}
