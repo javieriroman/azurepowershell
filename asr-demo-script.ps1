@@ -37,6 +37,7 @@ Import-AzureRmAutomationRunbook -AutomationAccountName asr-automation -Name post
 #> then select save and publish. Now you can use it on the recovery plan.  
 
 #> Last step is to create a recovery plan, base on this exersice the name should be "myrecoveryplan"
+#> Go into the recovery plan and hit customize to define the recovery process. 
 #> You should have 2 group members, the first one for the mysql server with a post script name postscript1 
 #> and the second one for the web VMs with a post script name postscript2. 
 #> After this you are ready to exectute a test failover.
