@@ -1,3 +1,6 @@
+#> This is an azure powershell script created to be execute from the azure portal Cloud Shell. 
+#> The objective is to create a source environment with real data to be protected and create the target environment with the require configuration.   
+
 $sourcerg = "asr-source"
 new-azurermresourcegroup -name $sourcerg -location eastus2
 New-AzureRmResourceGroupDeployment -resourcegroupname $sourcerg -templateuri https://raw.githubusercontent.com/javieriroman/azuretemplates/master/2tierlblinuxmysql-asrdemo-source.json
