@@ -12,8 +12,9 @@ $targetrg = "asr-target"
 new-azurermresourcegroup -name $targetrg -location westus2
 New-AzureRmResourceGroupDeployment -resourcegroupname $targetrg -templateuri  https://raw.githubusercontent.com/javieriroman/azuretemplates/master/2tierlblinuxmysql-asrdemo-target.json 
 
-#> Now we select the VMs that are going to be replicated/protected on the portal, 
-#> select the type of replication in this case "Azure to Azure" and the newtork mapping for the target site.
+#> Now go in the the recently create azure vault and in order to select the VMs that are going to be replicated/protected. 
+#> Inside the vault select the replicated items tile, click on the + replicate on the top section.
+#> Now select the type of replication in this case "Azure to Azure" and the newtork mapping for the target site.
 
 #> After replication has been enable on all the VMs we proceed to create automation variable for the post script.
 #> Please make sure that each value aligned with the current name of the resource you are defining.
