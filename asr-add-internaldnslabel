@@ -58,7 +58,7 @@ Catch
       Write-Error -Message $ErrorMessage `
                     -ErrorAction Stop
  }
-    #Getting VM details from the Recovery Plan Group, and associate the vNics with the Load Balancer
+    #Getting VM details from the Recovery Plan Group
 Try
  {
     $VMinfo = $RecoveryPlanContext.VmMap | Get-Member | Where-Object MemberType -EQ NoteProperty | select -ExpandProperty Name
@@ -79,14 +79,14 @@ Try
         {
             Write-Output "Availability Set is present for VM: `n" $AzureVm.Name
         }
-        #Join the VMs NICs to backend pool of the Load Balancer
+        #Add VM NICs an internal DNS label
         $nicid = $AzureVm.NetworkProfile.NetworkInterfaces[0]
         $ARMNic = Get-AzureRmResource -ResourceId $nicid.Id
         $Nic = Get-AzureRmNetworkInterface -Name $ARMNic.Name -ResourceGroupName $ARMNic.ResourceGroupName
         $Nic.DnsSettings.InternalDnsNameLabel = "mysqlserver";
         
         $Nic | Set-AzureRmNetworkInterface
-        Write-Output "Done configuring Load Balancing for VM" $AzureVm.Name 
+        Write-Output "Done adding internal dns label for VM" $AzureVm.Name 
         $number = $number + 1;   
     }
  }
