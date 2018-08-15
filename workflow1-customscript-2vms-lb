@@ -6,7 +6,7 @@ workflow workflow1
     #Define variables for VMs  
     $vm1Name = Get-AutomationVariable -Name 'vm1name' 
     $vm2Name = Get-AutomationVariable -Name 'vm2name'   
-    $resourceGroupName = "devopslab2rg" #Get-AutomationVariable -Name 'rgname'  
+    $resourceGroupName = Get-AutomationVariable -Name 'rgname'  
     $location = Get-AutomationVariable -Name 'location'   
     $username = Get-AutomationVariable -Name 'username'   
     $password = Get-AutomationVariable -Name 'password'   
