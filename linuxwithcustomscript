@@ -27,9 +27,9 @@ $vnet = New-AzureRmVirtualNetwork -ResourceGroupName $ResourceGroupName -Locatio
 $pip = New-AzureRmPublicIpAddress -ResourceGroupName $ResourceGroupName -Location $Location -AllocationMethod Static -IdleTimeoutInMinutes 4 -Name "mypublicdns$(Get-Random)" 
  
  
-# Create an inbound network security group rule for port 3389 
+# Create an inbound network security group rule for port 22 
  
-$nsgRulessh = New-AzureRmNetworkSecurityRuleConfig -Name myNetworkSecurityGroupRuleRDP  -Protocol Tcp -Direction Inbound -Priority 1000 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix * -DestinationPortRange 22 -Access Allow 
+$nsgRulessh = New-AzureRmNetworkSecurityRuleConfig -Name myNetworkSecurityGroupRuleSSH  -Protocol Tcp -Direction Inbound -Priority 1000 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix * -DestinationPortRange 22 -Access Allow 
  
  
 # Create an inbound network security group rule for port 80 
